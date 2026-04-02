@@ -1,1 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>User Form</title>
+</head>
+<body>
 
+<h2>User Registration</h2>
+
+<form id="userForm">
+  Name: <input type="text" id="name"><br><br>
+  Age: <input type="number" id="age"><br><br>
+  Gender:
+  <select id="gender">
+    <option>Male</option>
+    <option>Female</option>
+  </select><br><br>
+  Email: <input type="email" id="email"><br><br>
+  Mobile: <input type="text" id="mobile"><br><br>
+
+  <button type="submit">Submit</button>
+</form>
+
+<script>
+document.getElementById("userForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+
+  const data = {
+    name: document.getElementById("name").value,
+    age: document.getElementById("age").value,
+    gender: document.getElementById("gender").value,
+    email: document.getElementById("email").value,
+    mobile: document.getElementById("mobile").value
+  };
+
+  await fetch("http://localhost:5000/submit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  });
+
+  alert("Data Submitted!");
+});
+</script>
+
+</body>
+</html>
