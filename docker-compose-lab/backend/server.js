@@ -15,17 +15,36 @@ const pool = new Pool({
   port: 5432,
 });
 
-// Create table
-pool.query(`
-  CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
-    name TEXT,
-    age INT,
-    gender TEXT,
-    email TEXT,
-    mobile TEXT
-  );
-`);
+// ✅ Retry DB connection until ready
+const connectWithRetry = () => {
+  pool.connect((err, client, release) => {
+    if (err) {
+      console.log("❌ DB not ready, retrying in 5 seconds...");
+      setTimeout(connectWithRetry, 5000);
+    } else {
+      console.log("✅ Connected to PostgreSQL!");
+
+      // ✅ Create table safely after connection
+      client.query(`
+        CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          name TEXT,
+          age INT,
+          gender TEXT,
+          email TEXT,
+          mobile TEXT
+        );
+      `)
+      .then(() => console.log("✅ Table ensured"))
+      .catch(err => console.error("Table creation error:", err));
+
+      release();
+    }
+  });
+};
+
+// Call retry function
+connectWithRetry();
 
 // API to insert data
 app.post("/submit", async (req, res) => {
@@ -38,9 +57,12 @@ app.post("/submit", async (req, res) => {
     );
     res.send("Data saved successfully!");
   } catch (err) {
-    console.error(err);
+    console.error("Insert Error:", err);
     res.status(500).send("Error saving data");
   }
 });
 
-app.listen(5000, () => console.log("Backend running on port 5000"));
+// Start server
+app.listen(5000, () => {
+  console.log("🚀 Backend running on port 5000");
+});
