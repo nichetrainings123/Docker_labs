@@ -1,0 +1,12 @@
+version: "3.9"
+
+services:
+  web:
+    image: nichetrainings123/lab_ducat841226:V1.O
+    ports:
+      - "8080:80"
+
+  db:
+    image: nichetrainings123/my_sql:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: example
