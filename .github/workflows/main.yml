@@ -3,25 +3,43 @@ name: Deploy Website to Azure VM
 on:
   push:
     branches:
-      - main
-  workflow_dispatch:
+      - master
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: Checkout Code
-      uses: actions/checkout@v4
+      - name: Delete Old Website Files
+        uses: appleboy/ssh-action@v1.0.3
 
-    - name: Deploy to Azure VM using Password
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.VM_HOST }}
-        username: ${{ secrets.VM_USER }}
-        password: ${{ secrets.VM_PASSWORD }}
-        script: |
-          sudo rm -rf /var/www/html/*
-          git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git /tmp/site
-          sudo cp -r /tmp/site/* /var/www/html/
-          sudo systemctl restart nginx
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          script: |
+            sudo rm -rf /var/www/html/*
+
+      - name: Copy New Website Files
+        uses: appleboy/scp-action@v0.1.7
+
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          source: "./*"
+          target: "/var/www/html"
+
+      - name: Restart Nginx
+        uses: appleboy/ssh-action@v1.0.3
+
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          script: |
+            sudo systemctl restart nginx
+            sudo systemctl status nginx
