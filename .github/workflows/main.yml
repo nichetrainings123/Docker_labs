@@ -1,4 +1,4 @@
-name: Deploy Website to Azure VM
+name: Deploy Docker App to Azure VM
 
 on:
   push:
@@ -10,36 +10,53 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Delete Old Website Files
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Build Docker Image
+        run: |
+          docker build -t mywebsite:latest .
 
-        with:
-          host: ${{ secrets.HOST }}
-          username: ${{ secrets.USERNAME }}
-          password: ${{ secrets.PASSWORD }}
-          script: |
-            sudo rm -rf /var/www/html/*
+      - name: Save Docker Image
+        run: |
+          docker save mywebsite:latest > mywebsite.tar
 
-      - name: Copy New Website Files
+      - name: Copy Image to Azure VM
         uses: appleboy/scp-action@v0.1.7
-
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
-          source: "./*"
-          target: "/var/www/html"
+          source: "mywebsite.tar"
+          target: "/home/${{ secrets.USERNAME }}"
 
-      - name: Restart Nginx
+      - name: Deploy Container on Azure VM
         uses: appleboy/ssh-action@v1.0.3
-
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
           script: |
-            sudo systemctl restart nginx
-            sudo systemctl status nginx
+
+            # Load Docker image
+            docker load < mywebsite.tar
+
+            # Stop old container
+            docker stop mywebsite || true
+
+            # Remove old container
+            docker rm mywebsite || true
+
+            # Remove old image
+            docker image prune -f
+
+            # Run new container
+            docker run -d \
+              --name mywebsite \
+              -p 80:80 \
+              --restart always \
+              mywebsite:latest
+
+            # Verify running containers
+            docker ps
